@@ -3,6 +3,9 @@ package com.cos.review.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -19,6 +22,8 @@ import com.cos.review.repository.ProductRepository;
 import com.cos.review.repository.SearchKeywordRepository;
 import com.cos.review.util.CrawNaverBlog;
 
+import org.springframework.data.domain.Sort;
+
 @Controller
 public class CrawNaverController {
 	@Autowired
@@ -27,7 +32,7 @@ public class CrawNaverController {
 	@Autowired
 	private SearchKeywordRepository searchKeywordRepository;
 
-	@GetMapping("/craw/naver")
+	@GetMapping({"/","/craw/naver"})
 	public String crawNaver(Model model) {
 		model.addAttribute("keywords", searchKeywordRepository.findAll());
 		return "craw_naver";
@@ -39,9 +44,33 @@ public class CrawNaverController {
 		return "craw_list";
 	}
 
-	@GetMapping("/craw/clear")
-	public String crawClear(Model model) {
-		model.addAttribute("products", productRepository.findAll());
+	public String crawClear(
+			Model model,
+			@PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
+
+		int keywordId = searchKeywordRepository.findAll().get(0).getId();
+		Page<Product> products = productRepository.findByKeywordId(keywordId, pageable);
+		model.addAttribute("products", products.getContent());
+		model.addAttribute("prev", products.getPageable().getPageNumber()-1);
+		model.addAttribute("next", products.getPageable().getPageNumber()+1);
+		model.addAttribute("keywordId", keywordId);
+		model.addAttribute("allKeyword", searchKeywordRepository.findAll());
+
+		return "craw_clear";
+	}
+
+	@GetMapping("/craw/clear/{keywordId}")
+	public String crawClearKeyword(
+			@PathVariable int keywordId,
+			Model model, 
+			@PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
+
+		Page<Product> products = productRepository.findByKeywordId(keywordId, pageable);
+		model.addAttribute("products", products.getContent());
+		model.addAttribute("prev", products.getPageable().getPageNumber()-1);
+		model.addAttribute("next", products.getPageable().getPageNumber()+1);
+		model.addAttribute("keywordId", keywordId);
+		model.addAttribute("allKeyword", searchKeywordRepository.findAll());
 		return "craw_clear";
 	}
 	
